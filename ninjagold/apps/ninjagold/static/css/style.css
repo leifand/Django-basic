@@ -1,0 +1,12 @@
+/*
+  style.css
+  Leif Anderson 7/20/17
+*/
+body {
+  font-family: sans-serif;
+}
+.location {
+  display: inline-block;
+  border: 2px solid black;
+  width: 200px;
+}
