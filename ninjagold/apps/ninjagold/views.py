@@ -1,108 +1,83 @@
-from django.shortcuts import render
-
-def index(request):
-    # setup session counter - Django stores session on server!
-    if 'ninja_gold' not in request.session:
-        request.session['ninja_gold'] = 0;
-    else:
-        request.session['ninja_gold'] = request.session['ninja_gold'] + 1
-        curr_gold = request.session['ninja_gold'] # + new_amount
-
-    data = {
-        'ninja_gold' : curr_gold
-    }
-    return render(request, 'ninjagold/index.html', data)
-
-
-'''from django.shortcuts import render, redirect
+'''
+    ninjagold views.py
+    Leif Anderson 7/20/17
+'''
+from django.shortcuts import render, redirect
 import random
 import datetime
-from .forms import farmForm, houseForm, casinoForm, caveForm
 
-# Create your views here.
-def index(request):
-    if 'counter' not in request.session:
-        request.session['counter'] = 0
-    if not request.session.get('activity', None):
-        request.session.setdefault('activity', [0])
 
-    context = {
-        'counter' : request.session['counter'],
-        'activities': request.session['activity'],
-        'farmForm': farmForm(),
-        'houseForm': houseForm(),
-        'casinoForm': casinoForm(),
-        'caveForm': caveForm(),
-    }
-    return render(request, 'home/index.html', context)
-
-def randomNum(start, end):
-    num = random.randrange(start, end)
+# helpers
+# a cleaner random
+def rand_range(a, b):
+    num = random.randrange(a, b)
     return num
 
-def addActivity(request, num, action, location):
-    timestamp = datetime.datetime.now()
-    if not request.session.get('activity', None):
-        activities = []
-    else:
-        activities = request.session['activity']
-    print activities
-    if location == 'casino':
-        if action == 'earned':
-            earned = 'Earned %s from the casino! %s' % (num, timestamp)
-            activities.insert(0, ['earn', earned])
-        elif action == 'lost':
-            lost = 'Entered a casino and lost %s gold... Ouch %s' % (num, timestamp)
-            activities.insert(0, ['lost', lost])
-        else:
-            print "error"
-    elif location == 'farm':
-        activities.insert(0, ['earn', 'Earned %s from the %s! %s' % (num, location, timestamp)])
-    elif location == 'cave':
-        activities.insert(0, ['earn', 'Earned %s from the %s! %s' % (num, location, timestamp)])
-    elif location == 'house':
-        activities.insert(0, ['earn', 'Earned %s from the %s! %s' % (num, location, timestamp)])
-    else:
-        print "error"
-    request.session['activity'] = activities
+# add to our activity list
+def add_activity(activity, earned, ninja_data):
+    time_stamp = datetime.datetime.now()
+    activity_string = 'Earned ' + str(earned) + ' gold from the ' + activity + '!' + ' (' + str(time_stamp) + ')'
+    ninja_data['activities'].append(activity_string)
 
-def earnOrAdd():
-    chance = randomNum(0, 2)
-    if chance == 1:
-        return True
+# bad habits die hard
+def add_caisino_trip(activity, won_lost, ninja_data):
+    time_stamp = datetime.datetime.now()
+    if (won_lost >= 0):
+        activity_string = 'Entered a caisino and won ' + str(won_lost) + ' gold ... Nice!' + ' (' + str(time_stamp) + ')'
     else:
-        return False
+        activity_string = 'Entered a caisino and lost ' + str(won_lost) + ' gold ... Ouch!' + ' (' + str(time_stamp) + ')'
+    ninja_data['activities'].append(activity_string)
 
-def process_money(request):
-    if request.POST['hidden'] == 'farm':
-        farmNum = randomNum(10, 21)
-        request.session['counter'] += farmNum
-        addActivity(request, farmNum, 'earned', 'farm')
-    elif request.POST['hidden'] == 'cave':
-        caveNum = randomNum(5, 10)
-        request.session['counter'] += caveNum
-        addActivity(request, caveNum, 'earned', 'cave')
-    elif request.POST['hidden'] == 'house':
-        houseNum = randomNum(2, 5)
-        request.session['counter'] += houseNum
-        addActivity(request, houseNum, 'earned', 'house')
-    elif request.POST['hidden'] == 'casino':
-        casinoNum = randomNum(0, 50)
-        chance = earnOrAdd()
-        if chance == True:
-            request.session['counter'] += casinoNum
-            addActivity(request, casinoNum, 'earned', 'casino')
-        elif chance == False:
-            request.session['counter'] -= casinoNum
-            addActivity(request, casinoNum, 'lost', 'casino')
-        else:
-            print "Error"
-    else:
-        print "Error"
+
+# landing page
+def index(request):
+    # setup session - Django stores session on server!
+    if 'ninja_gold' not in request.session:
+        request.session['ninja_gold'] = 0
+    if 'activities' not in request.session:
+        request.session['activities'] = []
+
+    ninja_data = {
+        'ninja_gold' : request.session['ninja_gold'],
+        'activities' : request.session['activities']
+    }
+    return render(request, 'ninjagold/index.html', ninja_data)
+
+
+# redirect
+def success(request):
     return redirect('/')
 
-def clear(request):
+
+# destroy session keys
+def clear_session_keys(request):
     for key in request.session.keys():
         del request.session[key]
     return redirect('/')
-'''
+
+
+# process the users activity
+def process_money(request):
+
+    earned = 0;
+    ninja_data = request.session
+    activity = request.POST.get('activity')
+
+    if (activity == 'farm'):
+        earned = rand_range(100, 201)
+        add_activity(activity, earned, ninja_data)
+    elif (activity == 'cave'):
+        earned = rand_range(50, 101)
+        add_activity(activity, earned, ninja_data)
+    elif (activity == 'house'):
+        earned = rand_range(20, 51)
+        add_activity(activity, earned, ninja_data)
+    elif (activity == 'caisino'):
+        earned = rand_range(-500, 501)
+        add_caisino_trip(activity, earned, ninja_data)
+    else:
+        pass
+
+    ninja_data['ninja_gold'] += earned
+
+    return redirect('/')
